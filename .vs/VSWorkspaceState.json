@@ -13,8 +13,10 @@
   },
   "ExpandedNodes": [
     "",
-    "\\DependencyInjection"
+    "\\DependencyInjection",
+    "\\out",
+    "\\Test"
   ],
-  "SelectedNode": "\\DependencyInjection\\TypeIdentifier.h",
+  "SelectedNode": "\\Test\\CMakeLists.txt",
   "PreviewInSolutionExplorer": false
 }
