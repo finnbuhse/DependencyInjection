@@ -17,6 +17,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MTd")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 
+set(DI_LIBRARY_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/DependencyInjection/Debug)
+
 # Include sub-projects.
 add_subdirectory ("DependencyInjection")
 add_subdirectory ("Test")

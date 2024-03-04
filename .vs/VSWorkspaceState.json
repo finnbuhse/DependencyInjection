@@ -14,9 +14,8 @@
   "ExpandedNodes": [
     "",
     "\\DependencyInjection",
-    "\\out",
     "\\Test"
   ],
-  "SelectedNode": "\\Test\\CMakeLists.txt",
+  "SelectedNode": "\\Test",
   "PreviewInSolutionExplorer": false
 }
