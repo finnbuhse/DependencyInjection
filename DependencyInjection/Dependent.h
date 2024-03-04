@@ -23,9 +23,6 @@ protected:
 	template <size_t DEPEND_INDEX>
 	using DependencyPointerType = std::tuple_element<DEPEND_INDEX, std::tuple<DEPENDS*...>>::type;
 
-	template <size_t DEPEND_INDEX>
-	using DependencyType = std::tuple_element<DEPEND_INDEX, std::tuple<DEPENDS...>>::type;
-
 	#pragma region STATIC Get type identifiers
 	template <size_t DEPEND_INDEX>
 	static void getTypeIdentifiers(std::vector<TypeIdentifier>& outputIdentifiers)
@@ -106,6 +103,9 @@ protected:
 	#pragma endregion
 
 public:
+	template <size_t DEPEND_INDEX>
+	using DependencyType = std::tuple_element<DEPEND_INDEX, std::tuple<DEPENDS...>>::type;
+
 	static std::vector<TypeIdentifier> typeIdentifiers()
 	{
 		std::vector<TypeIdentifier> result(count);
