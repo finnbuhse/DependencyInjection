@@ -122,6 +122,13 @@ namespace refl {
         typename loophole_tuple<T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
 }
 
+// --== Is Shared Pointer ==--
+template<typename T>
+struct is_shared_ptr : std::false_type {};
+
+template<typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+
 // -== Construct from tuple ==--
 // 
 // From Stack Overflow answer by Barry, available at : https://stackoverflow.com/questions/38440844/constructor-arguments-from-a-tuples

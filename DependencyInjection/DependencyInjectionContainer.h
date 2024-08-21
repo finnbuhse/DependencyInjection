@@ -5,29 +5,48 @@
 #include <typeindex>
 #include <stdexcept>
 
-enum class Lifetime {
-    TRANSIENT,
-    SINGLETON
-};
+// TODO:
+// Singleton Reference Management : Review the management of static singleton instances to avoid unexpected behavior with their lifecycle.
+// Thread Safety : Ensure thread safety for creating and accessing singletons.
+// Error Messaging : Improve error messages for easier debugging when resolving unregistered types.
+// Documentation : Enhance comments and documentation for better readability and maintainability.
 
 class DependencyInjectionContainer {
 public:
-    template <typename T>
-    void registerType(Lifetime scope)
+    /*
+    Registers a type that can be injected, 
+    or optionally an interface type can be specified and registered, which gets injected with the true type.
+    Note: If a singleton of the specified type is already present, the reference to it will be dropped, and a new singleton will be instantiated.
+    */
+    template <typename InterfaceType, typename TrueType = InterfaceType>
+    void registerSingleton()
     {
-        mFactories[std::type_index(typeid(T))] = [this, scope]() -> std::shared_ptr<void> {
-            if (scope == Lifetime::SINGLETON) {
-                static std::shared_ptr<T> instance = createInstance<T>();
-                std::shared_ptr<void> p = instance;
-                return p;
-            }
-            else if (scope == Lifetime::TRANSIENT)
-            {
-                std::shared_ptr<T> instance = createInstance<T>();
-                std::shared_ptr<void> p = instance;
-                return p;
-            }
-            return nullptr;
+        mFactories[std::type_index(typeid(InterfaceType))] = [this]() -> std::shared_ptr<void> {
+            static std::shared_ptr<InterfaceType> instance = nullptr;
+            instance = createInstance<TrueType>();
+            return (std::shared_ptr<void>)instance;
+        };
+    }
+
+    template <typename InterfaceType, typename TrueType = InterfaceType>
+    void registerSingleton(std::shared_ptr<TrueType> singleton)
+    {
+        mFactories[std::type_index(typeid(InterfaceType))] = [this, singleton]() -> std::shared_ptr<void> {
+            static std::shared_ptr<InterfaceType> instance = nullptr;
+            instance = singleton;
+            return (std::shared_ptr<void>)instance;
+        };
+    }
+
+    /*
+    Registers an interface type for which the true type is injected.
+    */
+    template <typename InterfaceType, typename TrueType = InterfaceType>
+    void registerTransient()
+    {
+        mFactories[std::type_index(typeid(InterfaceType))] = [this]() -> std::shared_ptr<void> {
+            std::shared_ptr<InterfaceType> instance = createInstance<TrueType>();
+            return (std::shared_ptr<void>)instance;
         };
     }
 
@@ -60,8 +79,9 @@ private:
     template <std::size_t I = 0, typename... Ts>
     typename std::enable_if<I < sizeof...(Ts), void>::type resolveArgumentTuple(std::tuple<Ts...>& t)
     {
-        // Assuming tuple element is an std::shared_ptr
-        using ArgTypePtr = std::tuple_element_t<I, std::tuple<Ts...>>; 
+        // Tuple element must be an std::shared_ptr
+        using ArgTypePtr = std::tuple_element_t<I, std::tuple<Ts...>>;
+        static_assert(is_shared_ptr<ArgTypePtr>::value, "Constructor argument must be an std::shared_ptr referencing any type");
         using ArgType = std::tuple_element_t<I, std::tuple<Ts...>>::element_type;
         
         // Resolve the argument using the inner type of the std::shared_ptr type
