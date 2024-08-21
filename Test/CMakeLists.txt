@@ -10,7 +10,7 @@ include_directories (
 )
 
 # Add source to this project's executable.
-add_executable (RunDependencyInjectionTests "TypeRegistryTest.cpp" "DependentTest.cpp" "ContainerTest.cpp")
+add_executable (RunDependencyInjectionTests "DependencyInjectionContainerTest.cpp" "ReflectionTest.cpp")
 
 # Link test executable against gtest & gtest_main
 target_link_directories(RunDependencyInjectionTests PRIVATE 
