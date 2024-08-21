@@ -6,11 +6,22 @@
 #include <stdexcept>
 
 // TODO:
-// Singleton Reference Management : Review the management of static singleton instances to avoid unexpected behavior with their lifecycle.
-// Thread Safety : Ensure thread safety for creating and accessing singletons.
+// Thread Safety : Ensure thread safety for creating and accessing mSingletons.
 // Error Messaging : Improve error messages for easier debugging when resolving unregistered types.
 // Documentation : Enhance comments and documentation for better readability and maintainability.
 
+/*
+template<typename Tuple, typename Condition, std::size_t Index = 0>
+struct are_all_tuple_elements {
+    static constexpr bool value = Index == std::tuple_size<Tuple>::value ||
+        (Condition<std::tuple_element_t<Index, Tuple>>::value &&
+            are_all_tuple_elements<Tuple, Condition, Index + 1>::value);
+};
+*/
+
+/*
+Dependency injection container for classes that have std::shared_pointer<T> dependencies specified in their constructors.
+*/
 class DependencyInjectionContainer {
 public:
     /*
@@ -21,20 +32,43 @@ public:
     template <typename InterfaceType, typename TrueType = InterfaceType>
     void registerSingleton()
     {
-        mFactories[std::type_index(typeid(InterfaceType))] = [this]() -> std::shared_ptr<void> {
-            static std::shared_ptr<InterfaceType> instance = nullptr;
-            instance = createInstance<TrueType>();
-            return (std::shared_ptr<void>)instance;
+        mSingletons[std::type_index(typeid(InterfaceType))] = nullptr; // Reset the singleton instance
+        mFactories[std::type_index(typeid(InterfaceType))] = [this]() -> std::shared_ptr<void> 
+        { // Instantiate when needed
+            std::shared_ptr<void>& instance = mSingletons[std::type_index(typeid(InterfaceType))];
+            if (!instance) {
+                instance = createInstance<TrueType>();
+            }
+            return std::static_pointer_cast<void>(instance);
         };
     }
 
     template <typename InterfaceType, typename TrueType = InterfaceType>
     void registerSingleton(std::shared_ptr<TrueType> singleton)
     {
-        mFactories[std::type_index(typeid(InterfaceType))] = [this, singleton]() -> std::shared_ptr<void> {
-            static std::shared_ptr<InterfaceType> instance = nullptr;
-            instance = singleton;
-            return (std::shared_ptr<void>)instance;
+        mSingletons[std::type_index(typeid(InterfaceType))] = std::static_pointer_cast<void>(singleton); // Assign singleton instance
+        mFactories[std::type_index(typeid(InterfaceType))] = [this, singleton]() -> std::shared_ptr<void>
+        {
+            return std::static_pointer_cast<void>(singleton);
+        };
+    }
+
+    /*
+    For registering a primitive type.
+    Note: The specified type must be copy constructible.
+    */ 
+    template <typename InterfaceType, typename TrueType = InterfaceType>
+    void registerSingleton(TrueType singleton)
+    {
+        mSingletons[std::type_index(typeid(InterfaceType))] = nullptr; // Reset the singleton instance
+        mFactories[std::type_index(typeid(InterfaceType))] = [this, singleton]() -> std::shared_ptr<void>
+        {
+            // Instantiate when needed
+            std::shared_ptr<void>& instance = mSingletons[std::type_index(typeid(InterfaceType))];
+            if (!instance) {
+                instance = std::make_shared<TrueType>(singleton);
+            }
+            return std::static_pointer_cast<void>(instance);
         };
     }
 
@@ -69,6 +103,7 @@ public:
 
 private:
     std::unordered_map<std::type_index, std::function<std::shared_ptr<void>()>> mFactories;
+    std::unordered_map<std::type_index, std::shared_ptr<void>> mSingletons;
 
     /*
     Resolves each constructor argument within the tuple.
@@ -79,13 +114,20 @@ private:
     template <std::size_t I = 0, typename... Ts>
     typename std::enable_if<I < sizeof...(Ts), void>::type resolveArgumentTuple(std::tuple<Ts...>& t)
     {
-        // Tuple element must be an std::shared_ptr
-        using ArgTypePtr = std::tuple_element_t<I, std::tuple<Ts...>>;
-        static_assert(is_shared_ptr<ArgTypePtr>::value, "Constructor argument must be an std::shared_ptr referencing any type");
-        using ArgType = std::tuple_element_t<I, std::tuple<Ts...>>::element_type;
+        using ArgTypeRaw = std::tuple_element_t<I, std::tuple<Ts...>>;
         
         // Resolve the argument using the inner type of the std::shared_ptr type
-        std::get<I>(t) = resolve<ArgType>();
+        if constexpr (is_shared_ptr<ArgTypeRaw>::value)
+        {
+            // If constructor argument type is an std::shared_ptr resolve as normal
+            using ArgType = std::tuple_element_t<I, std::tuple<Ts...>>::element_type;
+            std::get<I>(t) = resolve<ArgType>();
+        }
+        else
+        {
+            // Otherwise, resolve and dereference pointer
+            std::get<I>(t) = *resolve<ArgTypeRaw>().get();
+        }
 
         // Resolve remaining arguments
         resolveArgumentTuple<I + 1, Ts...>(t);
@@ -96,7 +138,7 @@ private:
     */ 
     template<typename T>
     std::shared_ptr<T> createInstance() {
-        refl::constructor_arguments_as_tuple_type<T> tuple{}; // std::tuple<std::shared_ptr<>, std::shared_ptr<>, ...>
+        refl::constructor_arguments_as_tuple_type<T> tuple{};
         resolveArgumentTuple(tuple);
         return makeSharedFromTuple<T>(tuple);
     }
