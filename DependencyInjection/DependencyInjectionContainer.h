@@ -21,6 +21,9 @@ struct are_all_tuple_elements {
 
 /*
 Dependency injection container for classes that have std::shared_pointer<T> dependencies specified in their constructors.
+The order dependencies are constructed depends on when they are required.
+If multiple services are required by one class, they are constructed in the same order
+as the order they appear in within the constructor of the class.
 */
 class DependencyInjectionContainer {
 public:
@@ -58,7 +61,7 @@ public:
     Note: The specified type must be copy constructible.
     */ 
     template <typename InterfaceType, typename TrueType = InterfaceType>
-    void registerSingleton(TrueType singleton)
+    void registerSingleton(const TrueType& singleton)
     {
         mSingletons[std::type_index(typeid(InterfaceType))] = nullptr; // Reset the singleton instance
         mFactories[std::type_index(typeid(InterfaceType))] = [this, singleton]() -> std::shared_ptr<void>
